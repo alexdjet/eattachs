@@ -13,7 +13,39 @@ import (
 	"github.com/emersion/go-message"
 )
 
-func connectImap(host, user, password string) (*client.Client, error) {
+type IMAPClient interface {
+	List(ref, mailbox string, ch chan *imap.MailboxInfo) error
+	Select(name string, readOnly bool) (*imap.MailboxStatus, error)
+	Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error
+	Logout() error
+	Search(criteria *imap.SearchCriteria) ([]uint32, error)
+}
+
+type RIMAPClient struct {
+	*client.Client
+}
+
+// func (r *RIMAPClient) Login(username, password string) error {
+// 	return r.Client.Login(username, password)
+// }
+
+func (r *RIMAPClient) Select(name string, readOnly bool) (*imap.MailboxStatus, error) {
+	return r.Client.Select(name, readOnly)
+}
+
+func (r *RIMAPClient) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
+	return r.Client.Fetch(seqset, items, ch)
+}
+
+func (r *RIMAPClient) Logout() error {
+	return r.Client.Logout()
+}
+
+func (r *RIMAPClient) Search(criteria *imap.SearchCriteria) ([]uint32, error) {
+	return r.Client.Search(criteria)
+}
+
+func connectImap(host, user, password string) (IMAPClient, error) {
 	log.Println("Connecting to server...")
 
 	client, err := client.DialTLS(host, nil)
@@ -33,7 +65,8 @@ func connectImap(host, user, password string) (*client.Client, error) {
 	return client, nil
 }
 
-func getListEmail(clt *client.Client, cfg *Config) ([]*imap.Message, error) {
+
+func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	done := make(chan error, 1)
 
@@ -89,7 +122,7 @@ func getListEmail(clt *client.Client, cfg *Config) ([]*imap.Message, error) {
 	}
 
 	// ----
-	files, err := GetAttachmets(resultMessages, cfg)
+	files, err := SaveAttachmets(resultMessages, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -104,7 +137,8 @@ func getListEmail(clt *client.Client, cfg *Config) ([]*imap.Message, error) {
 	return resultMessages, nil
 }
 
-func searchBySubject(c *client.Client, seen bool, from, subject string) ([]uint32, error) {
+
+func searchBySubject(c IMAPClient, seen bool, from, subject string) ([]uint32, error) {
 	criteria := imap.NewSearchCriteria()
 	criteria.Header = textproto.MIMEHeader{
 		"From":    []string{from},
@@ -122,7 +156,7 @@ func searchBySubject(c *client.Client, seen bool, from, subject string) ([]uint3
 	return seqNums, nil
 }
 
-func GetAttachmets(messages []*imap.Message, cfg *Config) ([]string, error) {
+func SaveAttachmets(messages []*imap.Message, cfg *Config) ([]string, error) {
 
 	var files []string
 
