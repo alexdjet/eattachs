@@ -21,29 +21,31 @@ type IMAPClient interface {
 	Search(criteria *imap.SearchCriteria) ([]uint32, error)
 }
 
-type RIMAPClient struct {
-	*client.Client
-}
+// type RIMAPClient struct {
+// 	*client.Client
+// }
 
+/*
 // func (r *RIMAPClient) Login(username, password string) error {
 // 	return r.Client.Login(username, password)
 // }
+*/
 
-func (r *RIMAPClient) Select(name string, readOnly bool) (*imap.MailboxStatus, error) {
-	return r.Client.Select(name, readOnly)
-}
+// func (r *RIMAPClient) Select(name string, readOnly bool) (*imap.MailboxStatus, error) {
+// 	return r.Client.Select(name, readOnly)
+// }
 
-func (r *RIMAPClient) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
-	return r.Client.Fetch(seqset, items, ch)
-}
+// func (r *RIMAPClient) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
+// 	return r.Client.Fetch(seqset, items, ch)
+// }
 
-func (r *RIMAPClient) Logout() error {
-	return r.Client.Logout()
-}
+// func (r *RIMAPClient) Logout() error {
+// 	return r.Client.Logout()
+// }
 
-func (r *RIMAPClient) Search(criteria *imap.SearchCriteria) ([]uint32, error) {
-	return r.Client.Search(criteria)
-}
+// func (r *RIMAPClient) Search(criteria *imap.SearchCriteria) ([]uint32, error) {
+// 	return r.Client.Search(criteria)
+// }
 
 func connectImap(host, user, password string) (IMAPClient, error) {
 	log.Println("Connecting to server...")
@@ -64,7 +66,6 @@ func connectImap(host, user, password string) (IMAPClient, error) {
 
 	return client, nil
 }
-
 
 func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 	mailboxes := make(chan *imap.MailboxInfo, 10)
@@ -136,7 +137,6 @@ func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 
 	return resultMessages, nil
 }
-
 
 func searchBySubject(c IMAPClient, seen bool, from, subject string) ([]uint32, error) {
 	criteria := imap.NewSearchCriteria()
