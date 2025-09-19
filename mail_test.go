@@ -59,7 +59,7 @@ func (l MyLiteral) Len() int {
 func TestGetListEmail_InboxSuccess(t *testing.T) {
 	mockClient := &MockIMAPClient{
 		searchFunc: func(criteria *imap.SearchCriteria) ([]uint32, error) {
-			return []uint32{7}, nil
+			return []uint32{1, 3}, nil
 		},
 		listFunc: func(ref, mailbox string, ch chan *imap.MailboxInfo) error {
 			ch <- &imap.MailboxInfo{Name: "INBOX", Attributes: []string{"\\Noselect", "\\HasChildren", "\\Marked"}}
@@ -67,7 +67,6 @@ func TestGetListEmail_InboxSuccess(t *testing.T) {
 			return nil
 		},
 		selectFunc: func(name string, readOnly bool) (*imap.MailboxStatus, error) {
-
 			return &imap.MailboxStatus{
 				ReadOnly:       false,
 				Items:          make(map[imap.StatusItem]interface{}),
@@ -84,56 +83,67 @@ func TestGetListEmail_InboxSuccess(t *testing.T) {
 			// return &imap.MailboxStatus{Flags: []string{"\\Seen"}}, nil
 		},
 		fetchFunc: func(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
-			ch <- &imap.Message{SeqNum: 1}
-			ch <- &imap.Message{SeqNum: 2}
+			if seqset.Contains(1) {
+				ch <- &imap.Message{SeqNum: 1}
+			}
 
-			ch <- &imap.Message{
-				SeqNum:       3,
-				Uid:          1001,
-				Size:         5000,
-				InternalDate: time.Now(),
-				Flags:        []string{"\\Seen"},
-				Envelope: &imap.Envelope{
-					Date:      time.Now(),
-					Subject:   "Приветствие",
-					From:      []*imap.Address{{PersonalName: "Иван Петров", MailboxName: "ivan", HostName: "example.com"}},
-					Sender:    []*imap.Address{{MailboxName: "support", HostName: "example.com"}},
-					ReplyTo:   []*imap.Address{{MailboxName: "reply", HostName: "example.com"}},
-					To:        []*imap.Address{{PersonalName: "Анна Сидорова", MailboxName: "anna", HostName: "example.com"}},
-					Cc:        []*imap.Address{{MailboxName: "cc", HostName: "example.com"}},
-					InReplyTo: "<reply-id@example.com>",
-					MessageId: "<message-id@example.com>",
-				},
-				BodyStructure: &imap.BodyStructure{
-					MIMEType:    "multipart",
-					MIMESubType: "mixed",
-					Parts: []*imap.BodyStructure{
-						{
-							MIMEType:    "text",
-							MIMESubType: "plain",
-							Params: map[string]string{
-								"charset": "utf-8",
+			if seqset.Contains(2) {
+				ch <- &imap.Message{SeqNum: 2}
+			}
+
+			if seqset.Contains(3) {
+				ch <- &imap.Message{
+					SeqNum:       3,
+					Uid:          1001,
+					Size:         5000,
+					InternalDate: time.Now(),
+					Flags:        []string{"\\Seen"},
+					Envelope: &imap.Envelope{
+						Date:      time.Now(),
+						Subject:   "Приветствие",
+						From:      []*imap.Address{{PersonalName: "Иван Петров", MailboxName: "ivan", HostName: "example.com"}},
+						Sender:    []*imap.Address{{MailboxName: "support", HostName: "example.com"}},
+						ReplyTo:   []*imap.Address{{MailboxName: "reply", HostName: "example.com"}},
+						To:        []*imap.Address{{PersonalName: "Анна Сидорова", MailboxName: "anna", HostName: "example.com"}},
+						Cc:        []*imap.Address{{MailboxName: "cc", HostName: "example.com"}},
+						InReplyTo: "<reply-id@example.com>",
+						MessageId: "<message-id@example.com>",
+					},
+					BodyStructure: &imap.BodyStructure{
+						MIMEType:    "multipart",
+						MIMESubType: "mixed",
+						Parts: []*imap.BodyStructure{
+							{
+								MIMEType:    "text",
+								MIMESubType: "plain",
+								Params: map[string]string{
+									"charset": "utf-8",
+								},
+								Size:     1024,
+								Encoding: "quoted-printable",
+								Lines:    20,
 							},
-							Size:     1024,
-							Encoding: "quoted-printable",
-							Lines:    20,
-						},
-						{
-							MIMEType:    "text/csv",
-							MIMESubType: "csv",
-							Size:        500000,
-							Encoding:    "base64",
-							Disposition: "attachment",
-							DispositionParams: map[string]string{
-								"filename": "reporst.csv",
+							{
+								MIMEType:    "text/csv",
+								MIMESubType: "csv",
+								Size:        500000,
+								Encoding:    "base64",
+								Disposition: "attachment",
+								DispositionParams: map[string]string{
+									"filename": "reporst.csv",
+								},
 							},
 						},
 					},
-				},
-				Body: map[*imap.BodySectionName]imap.Literal{
-					&imap.BodySectionName{Partial: []int{0}}: MyLiteral{Data: []byte("Message1")},
-					&imap.BodySectionName{Partial: []int{0}}: MyLiteral{Data: []byte("Message2")},
-				},
+					Body: map[*imap.BodySectionName]imap.Literal{
+						{Partial: []int{0}}: MyLiteral{Data: []byte("Message1")},
+						{Partial: []int{0}}: MyLiteral{Data: []byte("Message2")},
+					},
+				}
+			}
+
+			if seqset.Contains(4) {
+				ch <- &imap.Message{SeqNum: 4}
 			}
 
 			close(ch)
@@ -151,7 +161,7 @@ func TestGetListEmail_InboxSuccess(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if len(msgs) != 0 {
+	if len(msgs) != 2 {
 		t.Errorf("expected 0 messages, got %d", len(msgs))
 	}
 }

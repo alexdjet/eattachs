@@ -97,7 +97,6 @@ func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 	}
 
 	if len(ids) == 0 {
-		log.Println()
 		return nil, errors.New("нет непрочитанных писем")
 	}
 
