@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/textproto"
@@ -121,14 +120,13 @@ func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 		log.Println(err)
 	}
 
-	// ----
 	files, err := SaveAttachmets(resultMessages, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if len(files) > 0 {
-		fmt.Println("Files:")
+		log.Println("Files:")
 		print(files)
 	}
 
@@ -212,7 +210,7 @@ func SaveAttachmets(messages []*imap.Message, cfg *Config) ([]string, error) {
 			dir := cfg.WorkDir
 			err = os.Mkdir(dir, 0755)
 			if err == nil {
-				fmt.Printf("Directory '%s' created successfully.\n", dir)
+				log.Printf("Directory '%s' created successfully.\n", dir)
 			}
 
 			path := dir + filename
