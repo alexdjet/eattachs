@@ -264,127 +264,165 @@ func TestGetListEmail_Files(t *testing.T) {
 				// 		</html>`)),
 				// }
 
-				fields := []interface{}{
+				fields := []any{
 					"UID", "1001",
-					"RFC822.SIZE", 5000,
+					"RFC822.SIZE", "5000",
 					"INTERNALDATE", time.Now().Format(imap.DateTimeLayout),
-					"FLAGS", []interface{}{"\\Seen", "\\Flagged"},
+					"FLAGS", []any{"\\Seen", "\\Flagged"},
+					"ENVELOPE", []any{
+						time.Now().Format(time.RFC1123),
+						"Subject example",
+						imap.FormatAddressList([]*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}}),
+						imap.FormatAddressList([]*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}}),
+						imap.FormatAddressList([]*imap.Address{{PersonalName: "Reply", AtDomainList: "example.com", MailboxName: "reply", HostName: "example.com"}}),
+						imap.FormatAddressList([]*imap.Address{{PersonalName: "To", AtDomainList: "example.com", MailboxName: "support", HostName: "example.com"}}),
+						imap.FormatAddressList([]*imap.Address{{PersonalName: "cc", AtDomainList: "example.com", MailboxName: "cc", HostName: "example.com"}}),
+						imap.FormatAddressList([]*imap.Address{{PersonalName: "bcc", AtDomainList: "example.com", MailboxName: "bcc", HostName: "example.com"}}),
+						"<reply-id@example.com>",
+						"<message-id@example.com>",
+					},
 
-					// imap.FetchEnvelope, &imap.Envelope{
-					// 	Date:      time.Now(),
-					// 	Subject:   "Приветствие",
-					// 	From:      []*imap.Address{{PersonalName: "Иван Петров", MailboxName: "ivan", HostName: "example.com"}},
-					// 	Sender:    []*imap.Address{{MailboxName: "support", HostName: "example.com"}},
-					// 	ReplyTo:   []*imap.Address{{MailboxName: "reply", HostName: "example.com"}},
-					// 	To:        []*imap.Address{{PersonalName: "Анна Сидорова", MailboxName: "anna", HostName: "example.com"}},
-					// 	Cc:        []*imap.Address{{MailboxName: "cc", HostName: "example.com"}},
-					// 	InReplyTo: "<reply-id@example.com>",
-					// 	MessageId: "<message-id@example.com>",
-					// },
-
-					"BODYSTRUCTURE", []interface{}{
-						[]interface{}{
-							"text",  // MIMEType
-							"plain", // MIMESubType
-							[]interface{}{ // Параметры
-								"charset", "utf-8",
-								"format", "flowed",
-							},
-							"<text-id@example.com>", // ID
-							"",                      // Описание
-							"quoted-printable",      // Encoding
-							1024,                    // Размер
-							20,
+					"BODYSTRUCTURE", []any{
+						"multipart",
+						"mixed",
+						[]any{
+							"boundary", "----boundary-string----",
+							"format-flowed",
 						},
-						[]interface{}{
-							"application", // MIMEType
-							"zip",         // MIMESubType
-							[]interface{}{ // Параметры
-								"name", "report.zip",
+						"<front@example.com>",
+						"Description:quoted-printable",
+						"base64",
+						"50",
+						[]any{
+							[]any{
+								"text",  // MIMEType
+								"plain", // MIMESubType
+								[]any{ // Параметры
+									"charset", "utf-8",
+									"format", "flowed",
+								},
+								"<text-id@example.com>", // ID
+								"<Description1>",        // Описание
+								"quoted-printable",      // Encoding
+								"1024",                  // Размер
+								"20",
 							},
-							"<attach-id@example.com>", // ID
-							"",                        // Описание
-							"base64",                  // Encoding
-							500000,                    // Размер
-							[]interface{}{ // Disposition
-								"attachment",
-								[]interface{}{
-									"filename", "отчет_2025.zip",
-									"size", "500KB",
+							[]any{
+								"text", // MIMEType
+								"html", // MIMESubType
+								[]any{ // Параметры
+									"charset", "utf-8",
+									"format", "flowed",
+								},
+								"<html-id@example.com>", // ID
+								"<Description1>",        // Описание
+								"quoted-printable",      // Encoding
+								"1024",                  // Размер
+								"20",
+							},
+							[]any{
+								"text", // MIMEType
+								"html", // MIMESubType
+								[]any{ // Параметры
+									"charset", "utf-8",
+									"format", "flowed",
+								},
+								"<html-id1@example.com>", // ID
+								"<Description1>",         // Описание
+								"quoted-printable",       // Encoding
+								"1024",                   // Размер
+								"20",
+							},
+							[]any{
+								"application", // MIMEType
+								"zip",         // MIMESubType
+								[]any{ // Параметры
+									"name", "report.zip",
+								},
+								"<attach-id@example.com>", // ID
+								"",                        // Описание
+								"base64",                  // Encoding
+								500000,                    // Размер
+								[]any{ // Disposition
+									"attachment",
+									[]any{
+										"filename", "отчет_2025.zip",
+										"size", "500KB",
+									},
 								},
 							},
 						},
-						// Тип multipart
-						"mixed",
-						// Расширенные параметры
-						[]interface{}{
-							"boundary", "----boundary-string----",
-						},
 
-						// Disposition всего сообщения
-						[]interface{}{
+						true,
+
+						"Disposition",
+
+						[]any{
 							"inline",
-							[]interface{}{
+							[]any{
 								"version", "1.0",
 							},
 						},
 
-						// Язык
-						"ru",
+						[]any{"ru"},
 
-						// Расположение
-						[]interface{}{
+						[]any{
 							"attachment",
 							"inline",
 						},
+
+						"md5asdfasdf",
 					},
 
 					// imap.FetchBodyStructure, &imap.BodyStructure{},
 
-					"BODY", []interface{}{
-						[]interface{}{
+					"BODY", []any{
+						[]any{
 							"text",  // MIMEType
 							"plain", // MIMESubType
-							[]interface{}{ // Параметры
+							[]any{ // Параметры
 								"charset", "utf-8",
 								"format", "flowed",
 							},
 							"<text-id@example.com>", // ID части
-							"",                      // Описание
+							"DescriptionBody1",      // Описание
 							"quoted-printable",      // Кодировка
-							1024,                    // Размер
-							20,                      // Количество строк
+							"1024",                  // Размер
+							"20",                    // Количество строк
 						},
 						// Вторая часть - HTML
-						[]interface{}{
+						[]any{
 							"text", // MIMEType
 							"html", // MIMESubType
-							[]interface{}{ // Параметры
+							[]any{ // Параметры
 								"charset", "utf-8",
 							},
 							"<html-id@example.com>", // ID части
-							"",                      // Описание
+							"DescriptionBody2",      // Описание
 							"quoted-printable",      // Кодировка
-							2048,                    // Размер
-							30,                      // Количество строк
+							"2048",                  // Размер
+							"30",                    // Количество строк
 						},
-						[]interface{}{
+						[]any{
 							"application",  // MIMEType
 							"octet-stream", // MIMESubType
-							[]interface{}{ // Параметры
+							[]any{ // Параметры
 								"name", "file.zip",
+								"modification-date", "2025-09-22", // Дата модификации (опционально)
+								"create-date", "2025-09-22", // Дата создания (опционально)
 							},
 							"<attach-id@example.com>", // ID части
-							"",                        // Описание
+							"DescriptionBody3",        // Описание
 							"base64",                  // Кодировка
-							500000,                    // Размер
-							[]interface{}{ // Disposition
-								"attachment",
-								[]interface{}{
-									"filename", "документ.zip",
-									"size", "500KB",
-								},
+							"500000",                  // Размер
+							"attachment1",             // Disposition
+							[]any{
+								"filename", []any{"name", "transactions-2025_07_08.csv.zip"},
+								"size", "500KB",
+								"modify-date", "2025-09-22T12:43:37Z", // Дата модификации
 							},
+							[]any{"lang"},
+							[]any{"location"},
 						},
 					},
 					// imap.FetchBody, map[*imap.BodySectionName]imap.Literal{},
@@ -395,9 +433,14 @@ func TestGetListEmail_Files(t *testing.T) {
 					log.Println(err)
 				}
 
-				log.Println(msg.Format()...)
+				// log.Println(msg.BodyStructure.Format()...)
 
-				r := msg.GetBody(&imap.BodySectionName{})
+				bsn := imap.BodySectionName{
+					Partial: []int{100, 50000}, // С 100-го байта, 500 байтов
+				}
+				log.Println(bsn.BodyPartName)
+
+				r := msg.GetBody(&bsn)
 				log.Println(r)
 
 				ch <- msg
