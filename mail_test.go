@@ -3,9 +3,7 @@ package main
 import (
 	"io"
 	"log"
-	"os"
 	"testing"
-	"time"
 
 	"bytes"
 
@@ -170,116 +168,136 @@ func TestGetListEmail_NoUnread(t *testing.T) {
 
 func createTestMessageWithAttachment() *imap.Message {
 	msg := &imap.Message{
-		SeqNum: 1,
-		Uid:    1001,
-		Flags:  []string{imap.SeenFlag},
-		Envelope: &imap.Envelope{
-			Date:      time.Now(),
-			Subject:   "Test email with attachment",
-			From:      []*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}},
-			Sender:    []*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}},
-			ReplyTo:   []*imap.Address{{PersonalName: "Reply", AtDomainList: "example.com", MailboxName: "reply", HostName: "example.com"}},
-			To:        []*imap.Address{{PersonalName: "To", AtDomainList: "example.com", MailboxName: "support", HostName: "example.com"}},
-			Cc:        []*imap.Address{{PersonalName: "cc", AtDomainList: "example.com", MailboxName: "cc", HostName: "example.com"}},
-			Bcc:       []*imap.Address{{PersonalName: "bcc", AtDomainList: "example.com", MailboxName: "bcc", HostName: "example.com"}},
-			InReplyTo: "<reply-id@example.com>",
-			MessageId: "<message-id@example.com>",
-		},
+		// SeqNum: 1,
+		// Uid:    1001,
+		// Flags:  []string{imap.SeenFlag},
+		// Envelope: &imap.Envelope{
+		// 	Date:      time.Now(),
+		// 	Subject:   "Test email with attachment",
+		// 	From:      []*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}},
+		// 	Sender:    []*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}},
+		// 	ReplyTo:   []*imap.Address{{PersonalName: "Reply", AtDomainList: "example.com", MailboxName: "reply", HostName: "example.com"}},
+		// 	To:        []*imap.Address{{PersonalName: "To", AtDomainList: "example.com", MailboxName: "support", HostName: "example.com"}},
+		// 	Cc:        []*imap.Address{{PersonalName: "cc", AtDomainList: "example.com", MailboxName: "cc", HostName: "example.com"}},
+		// 	Bcc:       []*imap.Address{{PersonalName: "bcc", AtDomainList: "example.com", MailboxName: "bcc", HostName: "example.com"}},
+		// 	InReplyTo: "<reply-id@example.com>",
+		// 	MessageId: "<message-id@example.com>",
+		// },
 
 		Body: make(map[*imap.BodySectionName]imap.Literal),
-		BodyStructure: &imap.BodyStructure{
-			// multipart/mixed
-			Parts: []*imap.BodyStructure{
-				{
-					MIMEType:    "text",
-					MIMESubType: "plain",
-					Params: map[string]string{
-						"charset": "utf-8",
-						"format":  "flowed",
-					},
-					Encoding: "quoted-printable",
-					Size:     1024,
-					Lines:    20,
-				},
-				{
-					MIMEType:    "text",
-					MIMESubType: "html",
-					Params: map[string]string{
-						"charset": "utf-8",
-					},
-					Encoding: "quoted-printable",
-					Size:     2048,
-					Lines:    30,
-				},
-				{
-					MIMEType:    "application",
-					MIMESubType: "octet-stream",
-					// Params: map[string]string{
-					// 	"name": "transactions-2025_07_08.csv.zip",
-					// },
-					Id:          "<attach-id@example.com>",
-					Description: "DescriptionBody3",
-					Encoding:    "base64",
-					Size:        500000,
-					// Disposition: &imap.BodyDisposition{
-					// 	Type: "attachment",
-					// 	Params: map[string]string{
-					// 		"filename":    "transactions-2025_07_08.csv.zip",
-					// 		"size":        "500KB",
-					// 		"modify-date": "2025-09-22T12:43:37Z",
-					// 	},
-					// },
-					Language: []string{"ru"},
-					Location: []string{""},
-				},
-			},
-			// Тип multipart
-			MIMEType:    "multipart",
-			MIMESubType: "mixed",
-			Params: map[string]string{
-				"boundary": "----boundary-string----",
-				"format":   "flowed",
-			},
-			Size: 500000 + 1024 + 2048,
-			// Дополнительные поля (ContentMD5, etc.) можно добавить при необходимости
-		},
 	}
 
 	// Создаем тело письма: 1-я часть — plain text
-	rawText := []byte("This is the plain text part of the email")
+	rawText := []byte(`Message-ID: <7cf4fa0c71e78fff42bf60af763beec4@pay.example.com>
+	Date: Tue, 23 Sep 2025 09:58:25 +0300
+	Subject: =?utf-8?Q?=D0=A0=D0=B5=D0=B5=D1=81=D1=82=D1=80_=D0=BF?=
+	 =?utf-8?Q?=D0=BB=D0=B0=D1=82=D0=B5=D0=B6=D0=B5=D0=B9_=D0=BF=D0=BE_=D0=9D?=
+	 =?utf-8?Q?=D0=9A=D0=9E_=C2=AB=D0=9C=D0=9E=D0=9D=D0=95=D0=A2=D0=90=C2=BB_?=
+	 =?utf-8?Q?=D1=81?= 15.09.2025 =?utf-8?Q?=D0=BF=D0=BE?= 21.09.2025
+	From: pay@example1.com
+	To: ubuifk@example1.com
+	Cc: support@example1.com
+	MIME-Version: 1.0
+	Content-Type: multipart/mixed;
+	boundary="--boundary--"
+	
+
+	--boundary
+	`)
 
 	// 2-я часть — HTML
-	rawHTML := []byte("<html><body>This is the <b>HTML</b> part</body></html>")
+	rawHTML := []byte(`Content-Type: multipart/html; charset=utf-8
+	Content-Transfer-Encoding: quoted-printable
+	
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www=
+	.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+		  <html
+		   =20
+			dir=3D"ltr"
+			xmlns=3D"http://www.w3.org/1999/xhtml"
+			xmlns:v=3D"urn:schemas-microsoft-com:vml"
+			=
+	xmlns:o=3D"urn:schemas-microsoft-com:office:office">
+			<head>
+			  <meta http-equiv=3D"Content-Type" content=3D"text/html; =
+	charset=3Dutf-8" />
+			  <meta http-equiv=3D"X-UA-Compatible" =
+	content=3D"IE=3Dedge" />
+			  <meta name=3D"viewport" =
+	content=3D"width=3Ddevice-width"/>
+	
+			  <title>=D0=94=D0=BE=D0=B1=
+	=D1=80=D0=BE =D0=BF=D0=BE=D0=B6=D0=B0=D0=BB=D0=BE=D0=B2=D0=B0=D1=82=D1=8C =
+	=D0=B2 Yonote</title>
+	
+	--boundary
+	`)
 
-	file, err := os.ReadFile("data/transactions-2025_07_09.csv.zip")
-	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
-	}
+	// file, err := os.ReadFile("data/transactions-2025_07_09.csv.zip")
+	// if err != nil {
+	// 	log.Fatalf("Error reading file: %v", err)
+	// }
 
 	// 3-я часть — вложение (например, zip)
-	// rawAttachment := []byte{0x50, 0x4b, 0x03, 0x04, 0x50, 0x4b, 0x03, 0x04, 0x50, 0x4b, 0x03, 0x04} // пример начальных байтов zip
+	rawAttachment := []byte(`Content-Type: multipart/vnd.openxmlformats-officedocument.spreadsheetml.sheet;
+   boundary="--boundary"
+	name=2025_09_21-2025_09_15.xlsx
+   Content-Transfer-Encoding: base64
+   Content-Disposition: attachment; filename=2025_09_21-2025_09_15.xlsx
+   
+   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
+   
+   --boundary
+   
+
+   `)
 
 	// Определяем BodySectionName для каждой части
 	sectionText := &imap.BodySectionName{
 		BodyPartName: imap.BodyPartName{
-			Path: []int{1},
+			// Path: []int{1},
 		},
 	}
 	sectionHTML := &imap.BodySectionName{
 		BodyPartName: imap.BodyPartName{
-			Path: []int{2},
+			// Path: []int{2},
 		},
 	}
 	sectionAttachment := &imap.BodySectionName{
 		BodyPartName: imap.BodyPartName{
-			Path: []int{3},
+			// Path: []int{3},
 		},
 	}
 
 	// Заполняем тело письма соответствующими частями
 	msg.Body[sectionText] = bytes.NewReader(rawText)
 	msg.Body[sectionHTML] = bytes.NewReader(rawHTML)
-	msg.Body[sectionAttachment] = bytes.NewReader(file)
+	msg.Body[sectionAttachment] = bytes.NewReader(rawAttachment)
 
 	return msg
 }
@@ -350,35 +368,51 @@ func TestGetListEmail_Files(t *testing.T) {
 
 	for _, msg := range msgs {
 
-		// log.Println(msg.Envelope.Format()...)
+		// log.Println(msg.Body)
 
-		for i := range 5 {
-			bs := imap.BodySectionName{
-				BodyPartName: imap.BodyPartName{
-					Path: []int{i + 1},
-				},
-			}
-
-			r := msg.GetBody(&bs)
-			if r == nil {
-				log.Println("Server didn't return message body [", i+1, "]")
-				continue
-			}
-
-			// log.Println(r)
-
-			entity, err := message.Read(r)
-			if err != nil {
-				log.Println("Ошибка парсинга MIME:", err)
-				continue
-			}
-
-			mr := entity.MultipartReader()
-			if mr == nil {
-				log.Println("Письмо не multipart, вложений нет")
-				continue
-			}
+		bs := imap.BodySectionName{
+			BodyPartName: imap.BodyPartName{
+				Path: []int{},
+			},
 		}
+
+		r := msg.GetBody(&bs)
+		if r == nil {
+			log.Println("Server didn't return message body")
+			continue
+		}
+
+		entity, err := message.Read(r)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		log.Println(entity.Header.Get(""))
+
+		mr := entity.MultipartReader()
+
+		if mr == nil {
+			log.Println("Письмо не multipart, вложений нет")
+			continue
+		}
+
+		log.Println(mr.NextPart())
+
+		// for {
+		// 	part, err := mr.NextPart()
+		// 	if err == io.EOF {
+		// 		break
+		// 	}
+
+		// 	if err != nil {
+		// 		log.Println("Ошибка чтения части письма:", err)
+		// 		break
+		// 	}
+
+		// 	log.Println(part)
+		// }
+
 	}
 
 }
