@@ -2,13 +2,10 @@ package main
 
 import (
 	"io"
-	"log"
+	"os"
 	"testing"
 
-	"bytes"
-
 	"github.com/emersion/go-imap"
-	"github.com/emersion/go-message"
 )
 
 type MockIMAPClient struct {
@@ -38,15 +35,6 @@ func (m *MockIMAPClient) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch c
 func (m *MockIMAPClient) Logout() error {
 	return m.logoutFunc()
 }
-
-// // Stub functions
-// func mockSearchBySubject(clt IMAPClient, unread bool, fromEmail, fromSubject string) ([]uint32, error) {
-// 	return []uint32{1, 2}, nil
-// }
-
-// func mockGetAttachments(msgs []*imap.Message, cfg *Config) ([]string, error) {
-// 	return []string{"file1.txt"}, nil
-// }
 
 type literalStruct struct {
 	data []byte
@@ -166,143 +154,8 @@ func TestGetListEmail_NoUnread(t *testing.T) {
 	}
 }
 
-func createTestMessageWithAttachment() *imap.Message {
-	msg := &imap.Message{
-		// SeqNum: 1,
-		// Uid:    1001,
-		// Flags:  []string{imap.SeenFlag},
-		// Envelope: &imap.Envelope{
-		// 	Date:      time.Now(),
-		// 	Subject:   "Test email with attachment",
-		// 	From:      []*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}},
-		// 	Sender:    []*imap.Address{{PersonalName: "Ivan Petrov", AtDomainList: "example.com", MailboxName: "ivan", HostName: "example.com"}},
-		// 	ReplyTo:   []*imap.Address{{PersonalName: "Reply", AtDomainList: "example.com", MailboxName: "reply", HostName: "example.com"}},
-		// 	To:        []*imap.Address{{PersonalName: "To", AtDomainList: "example.com", MailboxName: "support", HostName: "example.com"}},
-		// 	Cc:        []*imap.Address{{PersonalName: "cc", AtDomainList: "example.com", MailboxName: "cc", HostName: "example.com"}},
-		// 	Bcc:       []*imap.Address{{PersonalName: "bcc", AtDomainList: "example.com", MailboxName: "bcc", HostName: "example.com"}},
-		// 	InReplyTo: "<reply-id@example.com>",
-		// 	MessageId: "<message-id@example.com>",
-		// },
-
-		Body: make(map[*imap.BodySectionName]imap.Literal),
-	}
-
-	// Создаем тело письма: 1-я часть — plain text
-	rawText := []byte(`Message-ID: <7cf4fa0c71e78fff42bf60af763beec4@pay.example.com>
-	Date: Tue, 23 Sep 2025 09:58:25 +0300
-	Subject: =?utf-8?Q?=D0=A0=D0=B5=D0=B5=D1=81=D1=82=D1=80_=D0=BF?=
-	 =?utf-8?Q?=D0=BB=D0=B0=D1=82=D0=B5=D0=B6=D0=B5=D0=B9_=D0=BF=D0=BE_=D0=9D?=
-	 =?utf-8?Q?=D0=9A=D0=9E_=C2=AB=D0=9C=D0=9E=D0=9D=D0=95=D0=A2=D0=90=C2=BB_?=
-	 =?utf-8?Q?=D1=81?= 15.09.2025 =?utf-8?Q?=D0=BF=D0=BE?= 21.09.2025
-	From: pay@example1.com
-	To: ubuifk@example1.com
-	Cc: support@example1.com
-	MIME-Version: 1.0
-	Content-Type: multipart/mixed;
-	boundary="--boundary--"
-	
-
-	--boundary
-	`)
-
-	// 2-я часть — HTML
-	rawHTML := []byte(`Content-Type: multipart/html; charset=utf-8
-	Content-Transfer-Encoding: quoted-printable
-	
-	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www=
-	.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-		  <html
-		   =20
-			dir=3D"ltr"
-			xmlns=3D"http://www.w3.org/1999/xhtml"
-			xmlns:v=3D"urn:schemas-microsoft-com:vml"
-			=
-	xmlns:o=3D"urn:schemas-microsoft-com:office:office">
-			<head>
-			  <meta http-equiv=3D"Content-Type" content=3D"text/html; =
-	charset=3Dutf-8" />
-			  <meta http-equiv=3D"X-UA-Compatible" =
-	content=3D"IE=3Dedge" />
-			  <meta name=3D"viewport" =
-	content=3D"width=3Ddevice-width"/>
-	
-			  <title>=D0=94=D0=BE=D0=B1=
-	=D1=80=D0=BE =D0=BF=D0=BE=D0=B6=D0=B0=D0=BB=D0=BE=D0=B2=D0=B0=D1=82=D1=8C =
-	=D0=B2 Yonote</title>
-	
-	--boundary
-	`)
-
-	// file, err := os.ReadFile("data/transactions-2025_07_09.csv.zip")
-	// if err != nil {
-	// 	log.Fatalf("Error reading file: %v", err)
-	// }
-
-	// 3-я часть — вложение (например, zip)
-	rawAttachment := []byte(`Content-Type: multipart/vnd.openxmlformats-officedocument.spreadsheetml.sheet;
-   boundary="--boundary"
-	name=2025_09_21-2025_09_15.xlsx
-   Content-Transfer-Encoding: base64
-   Content-Disposition: attachment; filename=2025_09_21-2025_09_15.xlsx
-   
-   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
-   
-   --boundary
-   
-
-   `)
-
-	// Определяем BodySectionName для каждой части
-	sectionText := &imap.BodySectionName{
-		BodyPartName: imap.BodyPartName{
-			// Path: []int{1},
-		},
-	}
-	sectionHTML := &imap.BodySectionName{
-		BodyPartName: imap.BodyPartName{
-			// Path: []int{2},
-		},
-	}
-	sectionAttachment := &imap.BodySectionName{
-		BodyPartName: imap.BodyPartName{
-			// Path: []int{3},
-		},
-	}
-
-	// Заполняем тело письма соответствующими частями
-	msg.Body[sectionText] = bytes.NewReader(rawText)
-	msg.Body[sectionHTML] = bytes.NewReader(rawHTML)
-	msg.Body[sectionAttachment] = bytes.NewReader(rawAttachment)
-
-	return msg
-}
-
 func TestGetListEmail_Files(t *testing.T) {
+
 	mockClient := &MockIMAPClient{
 		searchFunc: func(criteria *imap.SearchCriteria) ([]uint32, error) {
 			return []uint32{3}, nil
@@ -338,8 +191,80 @@ func TestGetListEmail_Files(t *testing.T) {
 			}
 
 			if seqset.Contains(3) {
+				bsn := imap.BodySectionName{}
+				msg := &imap.Message{
+					SeqNum: 1,
+					Uid:    1001,
+					Flags:  []string{imap.SeenFlag},
+					Body: map[*imap.BodySectionName]imap.Literal{
+						&bsn: NewLiteral([]byte(
+							`Date: Mon, 22 Sep 2025 12:53:40 +0300 (MSK)
+From: PayAnyWay <noreply@support.payanyway.ru>
+To: pay@vspu.ru
+Message-ID: <1513202856.35376.1758534820444@support.moneta.ru>
+Subject: =?UTF-8?B?0JXQttC10LTQvdC10LLQvdGL0Lkg0L7RgtGH0LXRgiDQv9C+INC+?=
+    =?UTF-8?B?0L/QtdGA0LDRhtC40Y/QvCDQt9CwIDIxLjA5LjIwMjU=?=
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+    boundary="----=_Part_35374_276279577.1758534820324"
 
-				msg := createTestMessageWithAttachment()
+------=_Part_35374_276279577.1758534820324
+Content-Type: multipart/related; 
+    boundary="----=_Part_35375_2120977340.1758534820324"
+
+------=_Part_35375_2120977340.1758534820324
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+
+    MONETA.RU
+
+---------------------------------------------------------------------------=
+----
+
+    =D0=97=D0=B4=D1=80=D0=B0=D0=B2=D1=81=D1=82=D0=B2=D1=83=D0=B9=D1=82=D0=B5,
+
+    =D0=95=D0=B6=D0=B5=D0=B4=D0=BD=D0=B5=D0=B2=D0=BD=D1=8B=D0=B9 =D0=BE=D1=82=
+=D1=87=D0=B5=D1=82 =D0=BF=D0=BE =D0=BE=D0=BF=D0=B5=D1=80=D0=B0=D1=86=D0=B8=
+=D1=8F=D0=BC =D0=B7=D0=B0 21.09.2025.
+
+---------------------------------------------------------------------------=
+----
+
+    =D0=A1 =D1=83=D0=B2=D0=B0=D0=B6=D0=B5=D0=BD=D0=B8=D0=B5=D0=BC,
+    =D0=A1=D0=BB=D1=83=D0=B6=D0=B1=D0=B0 =D0=BF=D0=BE =D1=80=D0=B0=D0=B1=D0=
+=BE=D1=82=D0=B5 =D1=81 =D0=BA=D0=BB=D0=B8=D0=B5=D0=BD=D1=82=D0=B0=D0=BC=D0=
+=B8 www.moneta.ru
+
+------=_Part_35375_2120977340.1758534820324--
+
+------=_Part_35374_276279577.1758534820324
+Content-Type: application/zip; name=transactions1.csv.zip
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename=transactions1.csv.zip
+
+UEsDBBQACAAIAIZ4PVsAAAAAAAAAAE8AAAAJACAAdGVzdDEuY3N2VVQNAAe9ddpoRmnaaMl12mh1
+eAsAAQToAwAABOgDAAArSS0usS4BEoZg0ghMGoNJEzBpas0FljaAqIIqg1DGEMoEQpkaWnMBAFBL
+Bwg96xv1KQAAAE8AAABQSwECFAMUAAgACACGeD1bPesb9SkAAABPAAAACQAgAAAAAAAAAAAAtIEA
+AAAAdGVzdDEuY3N2VVQNAAe9ddpoRmnaaMl12mh1eAsAAQToAwAABOgDAABQSwUGAAAAAAEAAQBX
+AAAAgAAAAAAA
+
+
+------=_Part_35374_276279577.1758534820324
+Content-Type: application/zip; name=transactions2.csv.zip
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename=transactions2.csv.zip
+
+UEsDBBQACAAIAAZ4PVsAAAAAAAAAAEcAAAAJACAAdGVzdDIuY3N2VVQNAAfNdNpozXTaaM102mh1
+eAsAAQToAwAABOgDAABLzs8xtE7OzzECEcYgwgREmIIIMxBhbs2VTFgNAFBLBwheYiLJHQAAAEcA
+AABQSwECFAMUAAgACAAGeD1bXmIiyR0AAABHAAAACQAgAAAAAAAAAAAAtIEAAAAAdGVzdDIuY3N2
+VVQNAAfNdNpozXTaaM102mh1eAsAAQToAwAABOgDAABQSwUGAAAAAAEAAQBXAAAAdAAAAAAA
+------=_Part_35374_276279577.1758534820324--
+
+`)),
+					},
+				}
+
 				ch <- msg
 			}
 
@@ -355,64 +280,41 @@ func TestGetListEmail_Files(t *testing.T) {
 		},
 	}
 
-	cfg := &Config{FromEmail: "files@example1.com", FromSubject: "Report files", WorkDir: "./data1"}
+	cfg := &Config{FromEmail: "files@example1.com", FromSubject: "Report files", WorkDir: "./tempData"}
 
 	msgs, err := getListEmail(mockClient, cfg)
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Errorf("expected no error, got %v", err)
 	}
 
 	if len(msgs) != 1 {
 		t.Errorf("expected 1 messages, got %d", len(msgs))
 	}
 
-	for _, msg := range msgs {
-
-		// log.Println(msg.Body)
-
-		bs := imap.BodySectionName{
-			BodyPartName: imap.BodyPartName{
-				Path: []int{},
-			},
-		}
-
-		r := msg.GetBody(&bs)
-		if r == nil {
-			log.Println("Server didn't return message body")
-			continue
-		}
-
-		entity, err := message.Read(r)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		log.Println(entity.Header.Get(""))
-
-		mr := entity.MultipartReader()
-
-		if mr == nil {
-			log.Println("Письмо не multipart, вложений нет")
-			continue
-		}
-
-		log.Println(mr.NextPart())
-
-		// for {
-		// 	part, err := mr.NextPart()
-		// 	if err == io.EOF {
-		// 		break
-		// 	}
-
-		// 	if err != nil {
-		// 		log.Println("Ошибка чтения части письма:", err)
-		// 		break
-		// 	}
-
-		// 	log.Println(part)
-		// }
-
+	filesWorkDir, err := os.ReadDir(cfg.WorkDir)
+	if err != nil {
+		t.Errorf("Error reading directory: %v", err)
 	}
 
+	if len(filesWorkDir) != 2 {
+		t.Errorf("expected 2 attached files, got %d", len(filesWorkDir))
+	}
+
+	for _, fl := range filesWorkDir {
+		name := fl.Name()
+
+		arr := make(map[string]struct{})
+		arr["transactions1.csv.zip"] = struct{}{}
+		arr["transactions2.csv.zip"] = struct{}{}
+
+		_, found := arr[name]
+		if !found {
+			t.Errorf("No files working directory")
+		}
+	}
+
+	errRemoveAl := os.RemoveAll(cfg.WorkDir)
+	if err != nil {
+		t.Fatalf("failed to remove directory %s: %v", cfg.WorkDir, errRemoveAl)
+	}
 }

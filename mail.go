@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/textproto"
 	"os"
+	"path/filepath"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
@@ -126,11 +127,8 @@ func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 	}
 
 	if len(files) > 0 {
-		log.Println("Files:")
-		print(files)
+		log.Println("Done!")
 	}
-
-	log.Println("Done!")
 
 	return resultMessages, nil
 }
@@ -213,7 +211,7 @@ func SaveAttachmets(messages []*imap.Message, cfg *Config) ([]string, error) {
 				log.Printf("Directory '%s' created successfully.\n", dir)
 			}
 
-			path := dir + filename
+			path := filepath.Join(dir, filename)
 			dst, err := os.Create(path)
 			if err != nil {
 				log.Println("Ошибка создания файла:", err)
