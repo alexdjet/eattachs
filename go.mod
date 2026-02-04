@@ -10,6 +10,8 @@ require (
 )
 
 require (
+	github.com/caarlos0/env v3.5.0+incompatible // indirect
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	golang.org/x/text v0.27.0 // indirect
 )

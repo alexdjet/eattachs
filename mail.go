@@ -2,18 +2,52 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/textproto"
 	"os"
+	"path/filepath"
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-message"
 )
 
-func connectImap(host, user, password string) (*client.Client, error) {
+type IMAPClient interface {
+	List(ref, mailbox string, ch chan *imap.MailboxInfo) error
+	Select(name string, readOnly bool) (*imap.MailboxStatus, error)
+	Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error
+	Logout() error
+	Search(criteria *imap.SearchCriteria) ([]uint32, error)
+}
+
+// type RIMAPClient struct {
+// 	*client.Client
+// }
+
+/*
+// func (r *RIMAPClient) Login(username, password string) error {
+// 	return r.Client.Login(username, password)
+// }
+*/
+
+// func (r *RIMAPClient) Select(name string, readOnly bool) (*imap.MailboxStatus, error) {
+// 	return r.Client.Select(name, readOnly)
+// }
+
+// func (r *RIMAPClient) Fetch(seqset *imap.SeqSet, items []imap.FetchItem, ch chan *imap.Message) error {
+// 	return r.Client.Fetch(seqset, items, ch)
+// }
+
+// func (r *RIMAPClient) Logout() error {
+// 	return r.Client.Logout()
+// }
+
+// func (r *RIMAPClient) Search(criteria *imap.SearchCriteria) ([]uint32, error) {
+// 	return r.Client.Search(criteria)
+// }
+
+func connectImap(host, user, password string) (IMAPClient, error) {
 	log.Println("Connecting to server...")
 
 	client, err := client.DialTLS(host, nil)
@@ -24,7 +58,6 @@ func connectImap(host, user, password string) (*client.Client, error) {
 
 	log.Println("Connected")
 
-	// Login
 	if err := client.Login(user, password); err != nil {
 		return nil, err
 	}
@@ -34,7 +67,7 @@ func connectImap(host, user, password string) (*client.Client, error) {
 	return client, nil
 }
 
-func getListEmail(clt *client.Client) ([]*imap.Message, error) {
+func getListEmail(clt IMAPClient, cfg *Config) ([]*imap.Message, error) {
 	mailboxes := make(chan *imap.MailboxInfo, 10)
 	done := make(chan error, 1)
 
@@ -51,7 +84,6 @@ func getListEmail(clt *client.Client) ([]*imap.Message, error) {
 		log.Fatal(err)
 	}
 
-	// Select INBOX
 	mbox, err := clt.Select("INBOX", false)
 	if err != nil {
 		return nil, err
@@ -59,41 +91,17 @@ func getListEmail(clt *client.Client) ([]*imap.Message, error) {
 
 	log.Println("Flags for INBOX:", mbox.Flags)
 
-	ids, err := searchBySubject(clt, true, "subuser@server.net", "Subject")
+	ids, err := searchBySubject(clt, true, cfg.FromEmail, cfg.FromSubject)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(ids) == 0 {
-		log.Println()
 		return nil, errors.New("нет непрочитанных писем")
 	}
 
 	seqset := new(imap.SeqSet)
 	seqset.AddNum(ids...)
-
-	// var criteria = imap.NewSearchCriteria()
-	// criteria.WithoutFlags = []string{"\\Seen"}
-	// criteria.Header = textproto.MIMEHeader{
-	// 	"From":    []string{"subuser@server.net"},
-	// 	"Subject": []string{"Subject"},
-	// }
-
-	// seqNums, err := clt.Search(criteria)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	//// Get the last 4 messages
-	// start := uint32(1)
-	// stop := mbox.Messages
-
-	// if mbox.Messages > 3 {
-	// 	start = mbox.Messages - 3
-	// }
-
-	// seqset := new(imap.SeqSet)
-	// seqset.AddRange(start, stop)
 
 	messages := make(chan *imap.Message, 10)
 	done = make(chan error, 1)
@@ -106,7 +114,6 @@ func getListEmail(clt *client.Client) ([]*imap.Message, error) {
 
 	log.Println("Last 10 messages:")
 	for msg := range messages {
-		// log.Println("* " + msg.Envelope.Subject)
 		resultMessages = append(resultMessages, msg)
 	}
 
@@ -114,25 +121,19 @@ func getListEmail(clt *client.Client) ([]*imap.Message, error) {
 		log.Println(err)
 	}
 
-	// ----
-	files, err := GetAttachmets(resultMessages)
+	files, err := SaveAttachmets(resultMessages, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if len(files) > 0 {
-		fmt.Println("Files:")
-		print(files)
+		log.Println("Done!")
 	}
-
-	// ----
-
-	log.Println("Done!")
 
 	return resultMessages, nil
 }
 
-func searchBySubject(c *client.Client, seen bool, from, subject string) ([]uint32, error) {
+func searchBySubject(c IMAPClient, seen bool, from, subject string) ([]uint32, error) {
 	criteria := imap.NewSearchCriteria()
 	criteria.Header = textproto.MIMEHeader{
 		"From":    []string{from},
@@ -150,34 +151,30 @@ func searchBySubject(c *client.Client, seen bool, from, subject string) ([]uint3
 	return seqNums, nil
 }
 
-func GetAttachmets(messages []*imap.Message) ([]string, error) {
+func SaveAttachmets(messages []*imap.Message, cfg *Config) ([]string, error) {
 
 	var files []string
 
 	for _, msg := range messages {
 
-		// Получаем тело письма в формате RFC822
 		r := msg.GetBody(&imap.BodySectionName{})
 		if r == nil {
 			log.Println("Не удалось получить тело письма")
 			continue
 		}
 
-		// Парсим MIME-сообщение
 		entity, err := message.Read(r)
 		if err != nil {
 			log.Println("Ошибка парсинга MIME:", err)
 			continue
 		}
 
-		// Если письмо multipart (с вложениями)
 		mr := entity.MultipartReader()
 		if mr == nil {
 			log.Println("Письмо не multipart, вложений нет")
 			continue
 		}
 
-		// Перебираем части письма
 		for {
 			part, err := mr.NextPart()
 			if err == io.EOF {
@@ -191,7 +188,6 @@ func GetAttachmets(messages []*imap.Message) ([]string, error) {
 
 			var filename = "defaultName"
 
-			// Получаем заголовок Content-Disposition, чтобы проверить, является ли часть вложением
 			disp, params, err := part.Header.ContentDisposition()
 			if err == nil && (disp == "attachment" || disp == "inline") {
 				if fName, ok := params["filename"]; ok {
@@ -201,37 +197,21 @@ func GetAttachmets(messages []*imap.Message) ([]string, error) {
 				continue
 			}
 
-			// // Если не нашли, пробуем из Content-Type
-			// _, params, err = mime.ParseMediaType(header.Get("Content-Type"))
-			// if err == nil {
-			// 	if name, ok := params["name"]; ok {
-			// 		return name
-			// 	}
-			// }
-
-			// // Получаем имя файла вложения
-			// filename, _ := part.FileName()
-			// if filename == "" {
-			// 	filename = "unknown"
-			// }
-
-			// Читаем содержимое вложения
 			data, err := io.ReadAll(part.Body)
 			if err != nil {
 				log.Println("Ошибка чтения вложения:", err)
 				continue
 			}
 
-			// Здесь можно сохранить data в файл или базу данных
 			log.Printf("Получено вложение: %s, размер: %d байт\n", filename, len(data))
 
-			dir := "./data/"
+			dir := cfg.WorkDir
 			err = os.Mkdir(dir, 0755)
 			if err == nil {
-				fmt.Printf("Directory '%s' created successfully.\n", dir)
+				log.Printf("Directory '%s' created successfully.\n", dir)
 			}
 
-			path := dir + filename
+			path := filepath.Join(dir, filename)
 			dst, err := os.Create(path)
 			if err != nil {
 				log.Println("Ошибка создания файла:", err)
@@ -239,9 +219,7 @@ func GetAttachmets(messages []*imap.Message) ([]string, error) {
 			}
 			defer dst.Close()
 
-			// Например, сохранить на диск:
 			os.WriteFile(path, data, 0644)
-
 			files = append(files, path)
 		}
 	}
