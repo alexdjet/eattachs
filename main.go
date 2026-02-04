@@ -17,6 +17,11 @@ type Config struct {
 	WorkDir     string `env:"WORK_DIR"`
 }
 
+var (
+	Version   string
+	BuildTime string
+)
+
 func main() {
 
 	if err := godotenv.Load(".env"); err != nil {
@@ -28,6 +33,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error load enviroment variables in .env file: %v", err)
 	}
+
+	fmt.Printf("Version: %s\n", Version)
+	fmt.Printf("Build Time: %s\n", BuildTime)
 
 	clientImap, err := connectImap(cfg.ImapServer, cfg.ImapUser, cfg.ImapPass)
 	if err != nil {
